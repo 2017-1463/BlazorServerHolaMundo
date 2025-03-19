@@ -1,0 +1,143 @@
+﻿@page "/empleados"
+
+@rendermode InteractiveServer
+@inject IEmpleadoService EmpleadoService
+
+<div class="bg-dark text-light p-3">
+    <h3 class="d-flex justify-content-between align-items-center text-warning">
+        Empleados
+        <span @onclick="Agregar" class="btn btn-outline-warning btn-lg fw-bold">+</span>
+    </h3>
+</div>
+
+@if (ShowForm)
+{
+    <div class="card shadow-lg mt-3">
+        <div class="card-header bg-warning text-dark text-center">@Titulo</div>
+        <div class="card-body bg-dark text-light">
+            <div class="form-group">
+                <label class="form-label fw-bold text-warning">Nombre</label>
+                <input class="form-control shadow-sm" type="text" @bind="Request.DatosPersonales.Nombre" />
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label fw-bold text-warning">Fecha de Nacimiento</label>
+                        <input class="form-control shadow-sm" type="date" @bind="Request.DatosPersonales.FechaDeNacimiento" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label fw-bold text-warning">Sueldo</label>
+                        <input class="form-control shadow-sm" type="number" @bind="Request.Sueldo" />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer bg-dark text-light d-flex justify-content-end gap-2">
+            <button @onclick="Add" class="btn btn-success shadow-lg">Aceptar</button>
+            <button @onclick="Clear" class="btn btn-danger shadow-lg">Cancelar</button>
+        </div>
+    </div>
+}
+else
+{
+    <table class="table table-striped table-hover mt-4 shadow-sm bg-dark text-light">
+        <thead class="bg-warning text-dark">
+            <tr>
+                <th class="text-white">Acciones</th>
+                <th class="text-white">Código</th>
+                <th class="text-white">Empleado</th>
+                <th class="text-white">Fecha de Nacimiento</th>
+                <th class="text-white">Sueldo</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Listado)
+            {
+                <tr class="text-white">
+                    <td>
+                        <div class="btn-group">
+                            <button @onclick="()=>Modificar(item.Id)" class="btn btn-warning shadow-sm">Modificar</button>
+                            <button @onclick="()=>Eliminar(item.Id)" class="btn btn-danger shadow-sm">Eliminar</button>
+                        </div>
+                    </td>
+                    <td>@item.Id</td>
+                    <td>@item.DatosPersonales.Nombre</td>
+                    <td>@(item.DatosPersonales.FechaDeNacimiento?.ToString("dd/MM/yyyy") ?? "N/A")</td>
+                    <td>@item.Sueldo.ToString("N2")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    public string Titulo { get; set; } = "";
+    public EmpleadoDto Request { get; set; } = new();
+    public List<EmpleadoDto> Listado { get; set; } = new List<EmpleadoDto>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Consultar();
+    }
+
+    private async Task Consultar()
+    {
+        Listado = await EmpleadoService.Consultar("");
+    }
+
+    public bool ShowForm { get; set; } = false;
+
+    private void Toggle()
+    {
+        ShowForm = !ShowForm;
+        StateHasChanged();
+    }
+
+    private void Clear()
+    {
+        Request = new();
+        Toggle();
+    }
+
+    private void Agregar()
+    {
+        Clear();
+        Titulo = "Registrar Empleado";
+        ShowForm = true;
+        StateHasChanged();
+    }
+
+    private async Task Add()
+    {
+        var result = Request.Id == 0
+            ? await EmpleadoService.Crear(Request)
+            : await EmpleadoService.Modificar(Request);
+
+        if (result)
+        {
+            await Consultar();
+            Clear();
+        }
+    }
+
+    private void Modificar(int Id)
+    {
+        Clear();
+        Titulo = "Modificar";
+        Request = Listado.FirstOrDefault(e => e.Id == Id) ?? new();
+        ShowForm = true;
+        StateHasChanged();
+    }
+
+    private async Task Eliminar(int Id)
+    {
+        var result = await EmpleadoService.Eliminar(Id);
+        if (result)
+        {
+            await Consultar();
+        }
+    }
+}
+
